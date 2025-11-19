@@ -48,9 +48,22 @@ class CommandContext:
 class CommandExecutor:
     def __init__(self, context: CommandContext):
         self.context = context
+        self._handlers = {
+            "open": self.handle_open,
+            "click": self.handle_click,
+            "clickAndWait": self.handle_clickAndWait,
+            "type": self.handle_type,
+            "sendKeys": self.handle_sendKeys,
+            "pause": self.handle_pause,
+            "mouseOver": self.handle_mouseOver,
+            "setWindowSize": self.handle_setWindowSize,
+            "assertText": self.handle_assertText,
+            "assertElementPresent": self.handle_assertElementPresent,
+            "storeText": self.handle_storeText,
+        }
 
     def execute(self, command: SideCommand) -> None:
-        handler = getattr(self, f"handle_{command.command}", None)
+        handler = self._handlers.get(command.command)
         if handler is None:
             raise NotImplementedError(f"지원되지 않는 커맨드: {command.command}")
         handler(command)

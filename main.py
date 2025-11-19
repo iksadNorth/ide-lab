@@ -42,9 +42,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     return parser
 
+def load_project_from_path(side_file: Path):
+    json_payload = side_file.read_text(encoding="utf-8")
+    return load_side_project(json_payload, default_name=side_file.stem)
+
 
 def cmd_list(side_file: Path) -> int:
-    project = load_side_project(side_file)
+    project = load_project_from_path(side_file)
     print(f"프로젝트: {project.name}")
     print("Suites:")
     for suite in project.suites:
@@ -65,7 +69,7 @@ def cmd_run(
     base_url: str | None,
     implicit_wait: float,
 ) -> int:
-    project = load_side_project(side_file)
+    project = load_project_from_path(side_file)
     runner = SeleniumSideRunner(
         project=project,
         driver_factory=create_webdriver_factory(browser, headless=headless),

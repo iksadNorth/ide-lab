@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 from .models import SideCommand, SideProject, SideSuite, SideTest
 
@@ -37,14 +36,12 @@ def _build_suite(raw: Dict[str, Any]) -> SideSuite:
     )
 
 
-def load_side_project(path: str | Path) -> SideProject:
-    """Selenium IDE .side 파일을 읽어 SideProject 객체로 반환."""
-    file_path = Path(path)
-    if not file_path.exists():
-        raise FileNotFoundError(f".side 파일을 찾을 수 없습니다: {file_path}")
-
-    with file_path.open(encoding="utf-8") as fp:
-        raw_project = json.load(fp)
+def load_side_project(json_payload: str, *, default_name: str | None = None) -> SideProject:
+    """Selenium IDE .side JSON 문자열을 SideProject 객체로 변환."""
+    if not isinstance(json_payload, str):
+        raise TypeError("json_payload 는 문자열이어야 합니다.")
+    raw_project = json.loads(json_payload)
+    project_name = raw_project.get("name") or default_name or "Unnamed Project"
 
     tests = [_build_test(test) for test in raw_project.get("tests", [])]
     test_map = {test.id: test for test in tests}
@@ -53,7 +50,7 @@ def load_side_project(path: str | Path) -> SideProject:
 
     return SideProject(
         id=raw_project.get("id", ""),
-        name=raw_project.get("name", file_path.stem),
+        name=project_name,
         url=raw_project.get("url"),
         tests=test_map,
         suites=suites,
