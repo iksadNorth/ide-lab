@@ -4,7 +4,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from selenium_side_runner import (
+from src import (
     SeleniumSideRunner,
     create_webdriver_factory,
     load_side_project,
