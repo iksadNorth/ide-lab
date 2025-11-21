@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import urllib.request
 from contextlib import contextmanager
 from threading import Lock
 from typing import Dict, Optional
@@ -16,72 +18,80 @@ logger = logging.getLogger(__name__)
 class SessionPool:
     """Selenium Grid 세션 풀을 관리하는 클래스."""
 
-    def __init__(self, grid_url: str, pool_size: int = 4):
+    def __init__(self, grid_url: str, init_timeout: float = 30.0):
         """SessionPool을 초기화합니다.
 
         Args:
             grid_url: Selenium Grid Hub의 URL (예: http://localhost:4444)
-            pool_size: 미리 생성할 세션 수
+            init_timeout: 세션 풀 초기화 최대 시간 (초). 기본값: 30초
         """
         self.grid_url = grid_url.rstrip("/")
-        self.pool_size = pool_size
+        self.init_timeout = init_timeout
+        self.max_retries = 30
         self._sessions: Dict[str, WebDriver] = {}
         self._lock = Lock()
         self._initialized = False
 
-    def initialize(self) -> None:
-        """세션 풀을 초기화하고 미리 세션을 생성합니다."""
-        if self._initialized:
-            return
-
-        logger.info(f"세션 풀 초기화 시작 (크기: {self.pool_size})")
-
-        # Selenium Grid Hub가 준비될 때까지 대기
-        import time
-        import urllib.request
-        max_retries = 30
-        retry_delay = 2
+    async def initialize(self) -> None:
+        """세션 풀을 초기화하고 가능한 한 많은 세션을 생성합니다.
         
-        for attempt in range(max_retries):
+        세션 생성이 실패할 때까지 계속 시도하여 리소스 풀을 최대한 채웁니다.
+        """
+        if self._initialized: return
+        logger.info("세션 풀 초기화 시작 (최대한 많은 세션 확보 시도)")
+        
+        for attempt in range(self.max_retries):
             try:
                 status_url = f"{self.grid_url}/status"
                 with urllib.request.urlopen(status_url, timeout=5) as response:
-                    if response.status == 200:
-                        logger.info("Selenium Grid Hub 연결 확인 완료")
-                        break
+                    if response.status == 200: break
             except Exception as e:
-                if attempt < max_retries - 1:
-                    logger.warning(f"Selenium Grid Hub 연결 대기 중... ({attempt + 1}/{max_retries})")
-                    time.sleep(retry_delay)
-                else:
-                    logger.error(f"Selenium Grid Hub에 연결할 수 없습니다: {e}")
-                    self._initialized = True
-                    return
+                pass
+            if attempt >= self.max_retries - 1:
+                logger.error(f"Selenium Grid Hub에 연결 시도 실패")
+                self._initialized = True
+                return
 
-        for i in range(self.pool_size):
-            try:
-                driver = webdriver.Remote(
-                    command_executor=self.grid_url,
-                    options=webdriver.ChromeOptions(),
-                )
-                session_id = driver.session_id
-                if session_id:
-                    # 세션 warm up을 위해 www.google.com에 접속
-                    try:
-                        driver.get("https://www.google.com")
-                        logger.info(f"세션 생성 및 warm up 완료: {session_id}")
-                    except Exception as warmup_error:
-                        logger.warning(f"세션 warm up 실패 ({session_id}): {warmup_error}, 세션은 생성되었습니다")
-                    self._sessions[session_id] = driver
-                else:
-                    logger.error("세션 ID를 가져올 수 없습니다")
-                    driver.quit()
-            except Exception as e:
-                logger.error(f"세션 생성 실패: {e}")
-                # 실패한 세션은 스킵하고 계속 진행
+        # 비동기로 세션 풀 초기화 실행
+        await self._initialize_async()
 
         self._initialized = True
         logger.info(f"세션 풀 초기화 완료 (생성된 세션 수: {len(self._sessions)})")
+
+    async def create_session_async(self) -> WebDriver:
+        """비동기로 세션을 생성하는 함수."""
+        loop = asyncio.get_event_loop()
+        driver = await loop.run_in_executor(
+            None,
+            lambda: webdriver.Remote(
+                command_executor=self.grid_url,
+                options=webdriver.ChromeOptions(),
+            )
+        )
+        driver.get("https://www.google.com")
+        
+        return driver
+    
+    async def _initialize_async(self) -> None:
+        """비동기로 세션 풀을 초기화합니다."""
+        while True:
+            try:
+                driver = await asyncio.wait_for(self.create_session_async(), timeout=self.init_timeout)
+                
+                session_id = driver.session_id
+                if not session_id: break
+                self._sessions[session_id] = driver
+                logger.info(f"[현재 세션 수|{len(self._sessions)}]세션 생성 성공")
+                
+            except asyncio.TimeoutError:
+                logger.info(f"[현재 세션 수|{len(self._sessions)}]시간초과로 인한 생성 중단")
+                break
+            except asyncio.CancelledError:
+                logger.info(f"[현재 세션 수|{len(self._sessions)}]세션 생성 중단")
+                break
+            except Exception as e:
+                logger.info(f"[현재 세션 수|{len(self._sessions)}]세션 생성에 실패하여 로직 중단: {e}")
+                break
 
     def get_session(self, session_id: str) -> Optional[WebDriver]:
         """세션 풀에서 특정 세션을 가져옵니다.

@@ -87,7 +87,7 @@ services:
       - SIDE_STORAGE_DIR=/app/storage/sides
       - LOCK_STORAGE_DIR=/app/storage/locks
       - SELENIUM_GRID_URL=http://selenium-hub:4444
-      - SESSION_POOL_SIZE=2
+      - SESSION_POOL_INIT_TIMEOUT=60.0
       - LOG_DIR=/app/logs
     volumes:
       - ./storage:/app/storage

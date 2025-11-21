@@ -28,12 +28,12 @@ logger = get_logger(__name__)
 SIDE_STORAGE_DIR = Path(os.getenv("SIDE_STORAGE_DIR", "./storage/sides"))
 LOCK_STORAGE_DIR = Path(os.getenv("LOCK_STORAGE_DIR", "./storage/locks"))
 SELENIUM_GRID_URL = os.getenv("SELENIUM_GRID_URL", "http://localhost:4444")
-SESSION_POOL_SIZE = int(os.getenv("SESSION_POOL_SIZE", "4"))
+SESSION_POOL_INIT_TIMEOUT = float(os.getenv("SESSION_POOL_INIT_TIMEOUT", "30.0"))
 
 # Repository 및 Pool 초기화
 side_repository: SideRepository = FilesystemSideRepository(SIDE_STORAGE_DIR)
 lock_repository: LockRepository = FilesystemLockRepository(LOCK_STORAGE_DIR)
-session_pool: SessionPool = SessionPool(SELENIUM_GRID_URL, pool_size=SESSION_POOL_SIZE)
+session_pool: SessionPool = SessionPool(SELENIUM_GRID_URL, init_timeout=SESSION_POOL_INIT_TIMEOUT)
 
 
 @asynccontextmanager
@@ -41,7 +41,7 @@ async def lifespan(app: FastAPI):
     """애플리케이션 생명주기 관리."""
     # 시작 시 세션 풀 초기화
     logger.info("세션 풀 초기화 중...")
-    session_pool.initialize()
+    await session_pool.initialize()
     yield
     # 종료 시 세션 풀 정리
     logger.info("세션 풀 정리 중...")
