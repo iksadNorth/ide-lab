@@ -2,6 +2,10 @@
 
 **Pan**은 그리스 신화의 양치기 신으로, 양들을 목장에 풀어놓고 풀을 뜯어먹게 하며 양털을 취하는 것처럼, 이 프로젝트는 Selenium IDE가 내보내는 `.side` 파일을 Selenium WebDriver로 실행하여 HTML이라는 풀을 뜯어먹고 데이터라는 양털을 취하는 FastAPI 기반 웹 서버입니다.
 
+![양치기 그림](documents/shepherd.png)
+
+*그림 0: 양치기 소년 그림*
+
 Selenium Grid를 활용한 세션 풀링과 동시성 제어를 통해 안정적이고 효율적인 테스트 실행 환경을 제공합니다.
 
 ![시스템 아키텍처](documents/architecture-diagram.png)
