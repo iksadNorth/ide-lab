@@ -51,29 +51,29 @@ services:
       - selenium-grid
 
   # Chrome Node 2
-  chrome-node-2:
-    image: selenium/node-chrome:latest
-    platform: linux/amd64
-    container_name: chrome-node-2
-    depends_on:
-      - selenium-hub
-    environment:
-      - HUB_HOST=selenium-hub
-      - HUB_PORT=4444
-      - NODE_MAX_INSTANCES=4
-      - NODE_MAX_SESSION=4
-      - SE_VNC_PASSWORD=q1w2e3r4
-      - SE_EVENT_BUS_HOST=selenium-hub
-      - SE_EVENT_BUS_PUBLISH_PORT=4442
-      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
-    ports:
-      - "5902:5900"  # VNC 포트
-      - "7902:7900"  # noVNC 포트
-    volumes:
-      - /dev/shm:/dev/shm
-      - ./logs/chrome-node-2:/var/log/selenium
-    networks:
-      - selenium-grid
+  # chrome-node-2:
+  #   image: selenium/node-chrome:latest
+  #   platform: linux/amd64
+  #   container_name: chrome-node-2
+  #   depends_on:
+  #     - selenium-hub
+  #   environment:
+  #     - HUB_HOST=selenium-hub
+  #     - HUB_PORT=4444
+  #     - NODE_MAX_INSTANCES=4
+  #     - NODE_MAX_SESSION=4
+  #     - SE_VNC_PASSWORD=q1w2e3r4
+  #     - SE_EVENT_BUS_HOST=selenium-hub
+  #     - SE_EVENT_BUS_PUBLISH_PORT=4442
+  #     - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+  #   ports:
+  #     - "5902:5900"  # VNC 포트
+  #     - "7902:7900"  # noVNC 포트
+  #   volumes:
+  #     - /dev/shm:/dev/shm
+  #     - ./logs/chrome-node-2:/var/log/selenium
+  #   networks:
+  #     - selenium-grid
 
   # FastAPI 서버
   api-server:

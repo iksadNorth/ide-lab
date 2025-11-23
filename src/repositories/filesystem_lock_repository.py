@@ -78,3 +78,15 @@ class FilesystemLockRepository(LockRepository):
             if lock_file.exists():
                 lock_file.unlink()
 
+    def is_locked(self, lock_key: str) -> bool:
+        """Lock이 잠겨있는지 확인합니다.
+
+        Args:
+            lock_key: Lock의 고유 키
+
+        Returns:
+            Lock이 잠겨있으면 True, 그렇지 않으면 False
+        """
+        lock_file = self._get_lock_file_path(lock_key)
+        return lock_file.exists()
+

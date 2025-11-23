@@ -25,3 +25,15 @@ class LockRepository(ABC):
         """
         pass
 
+    @abstractmethod
+    def is_locked(self, lock_key: str) -> bool:
+        """Lock이 잠겨있는지 확인합니다.
+
+        Args:
+            lock_key: Lock의 고유 키
+
+        Returns:
+            Lock이 잠겨있으면 True, 그렇지 않으면 False
+        """
+        pass
+
