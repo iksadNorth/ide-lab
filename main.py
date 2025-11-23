@@ -12,6 +12,7 @@ from pydantic import BaseModel
 
 from src import SeleniumSideRunner, create_webdriver_factory, load_side_project
 from src.logger_config import get_logger, setup_logging
+from src.parser import Parser
 from src.repositories import (
     FilesystemLockRepository,
     FilesystemSideRepository,
@@ -76,6 +77,7 @@ class SessionExecuteRequest(BaseModel):
     side_id: str
     suite: str | None = None
     test: str | None = None
+    param: dict[str, str] | None = None
 
 
 # Side 관련 엔드포인트
@@ -248,6 +250,17 @@ async def execute_session(session_id: str, request: SessionExecuteRequest) -> st
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail=f"Side 파일을 찾을 수 없습니다: {request.side_id}",
                 )
+
+            # jinja2 템플릿 렌더링 (param이 있는 경우)
+            if request.param:
+                try:
+                    parser = Parser(request.param)
+                    side_content = parser.render(side_content)
+                except Exception as e:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"템플릿 렌더링 실패: {str(e)}",
+                    )
 
             # Side 프로젝트 로드
             try:
