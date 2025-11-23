@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -40,12 +41,22 @@ session_pool: SessionPool = SessionPool(SELENIUM_GRID_URL, init_timeout=SESSION_
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """애플리케이션 생명주기 관리."""
-    # 시작 시 세션 풀 초기화
-    logger.info("세션 풀 초기화 중...")
-    await session_pool.initialize()
+    # 시작 시 세션 풀 초기화 (백그라운드에서 비동기 실행)
+    logger.info("세션 풀 초기화 시작 (백그라운드 실행)...")
+    init_task = asyncio.create_task(session_pool.initialize())
+    
     yield
+    
     # 종료 시 세션 풀 정리
     logger.info("세션 풀 정리 중...")
+    # 초기화가 아직 진행 중이면 취소 시도
+    if not init_task.done():
+        logger.warning("세션 풀 초기화가 아직 진행 중입니다. 취소 시도...")
+        init_task.cancel()
+        try:
+            await init_task
+        except asyncio.CancelledError:
+            pass
     session_pool.cleanup()
 
 
