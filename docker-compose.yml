@@ -89,6 +89,7 @@ services:
       - SELENIUM_GRID_URL=http://selenium-hub:4444
       - SESSION_POOL_INIT_TIMEOUT=60.0
       - LOG_DIR=/app/logs
+      - LOG_LEVEL=DEBUG  # DEBUG로 설정하면 모든 메서드 호출이 로깅됨
     volumes:
       - ./storage:/app/storage
       - ./logs/api-server:/app/logs

@@ -13,7 +13,7 @@ from pydantic import BaseModel
 
 from src import SeleniumSideRunner, create_webdriver_factory, load_side_project
 from src.models import SideProject
-from src.logger_config import get_logger, setup_logging
+from src.logger_config import get_logger, log_method_call, setup_logging
 from src.parser import Parser
 from src.repositories import (
     FilesystemLockRepository,
@@ -39,6 +39,7 @@ lock_repository: LockRepository = FilesystemLockRepository(LOCK_STORAGE_DIR)
 session_pool: SessionPool = SessionPool(SELENIUM_GRID_URL, init_timeout=SESSION_POOL_INIT_TIMEOUT)
 
 
+@log_method_call
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """애플리케이션 생명주기 관리."""
@@ -93,6 +94,7 @@ class SessionExecuteRequest(BaseModel):
 
 
 # Side 관련 엔드포인트
+@log_method_call
 @app.post("/api/v1/sides/{side_id}", status_code=status.HTTP_201_CREATED)
 async def upload_side(side_id: str, request: SideUploadRequest) -> dict:
     """Side 파일을 업로드합니다.
@@ -121,6 +123,7 @@ async def upload_side(side_id: str, request: SideUploadRequest) -> dict:
         )
 
 
+@log_method_call
 @app.get("/api/v1/sides")
 async def list_sides() -> dict:
     """저장된 모든 Side 파일 목록을 조회합니다.
@@ -138,6 +141,7 @@ async def list_sides() -> dict:
         )
 
 
+@log_method_call
 @app.get("/api/v1/sides/{side_id}")
 async def get_side(side_id: str) -> dict:
     """특정 Side 파일의 내용을 조회합니다.
@@ -163,6 +167,7 @@ async def get_side(side_id: str) -> dict:
         )
 
 
+@log_method_call
 @app.patch("/api/v1/sides/{side_id}")
 async def update_side(side_id: str, request: SideUpdateRequest) -> dict:
     """Side 파일을 수정합니다.
@@ -200,6 +205,7 @@ async def update_side(side_id: str, request: SideUpdateRequest) -> dict:
         )
 
 
+@log_method_call
 @app.delete("/api/v1/sides/{side_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_side(side_id: str) -> None:
     """Side 파일을 삭제합니다.
@@ -222,6 +228,7 @@ async def delete_side(side_id: str) -> None:
 
 
 # Session 관련 엔드포인트
+@log_method_call
 @app.get("/api/v1/sessions")
 async def list_sessions() -> dict:
     """세션 풀에 있는 사용 가능한 세션 목록을 조회합니다.
@@ -239,6 +246,7 @@ async def list_sessions() -> dict:
         )
 
 
+@log_method_call
 async def _load_and_render_side(side_id: str, params: dict[str, str] | None = None) -> SideProject:
     """Side 파일을 로드하고 렌더링하여 SideProject 객체를 반환합니다.
     
@@ -282,6 +290,7 @@ async def _load_and_render_side(side_id: str, params: dict[str, str] | None = No
         )
 
 
+@log_method_call
 async def _execute_side_on_session(
     session_id: str, project: SideProject, suite: str | None = None, test: str | None = None
 ) -> str:
@@ -332,6 +341,7 @@ async def _execute_side_on_session(
         )
 
 
+@log_method_call
 @app.post("/api/v1/sessions", response_class=HTMLResponse)
 async def execute_session_auto(request: SessionExecuteRequest) -> str:
     """가용한 세션을 자동으로 찾아서 Side 파일을 실행하고 HTML 문서를 반환합니다.
@@ -381,6 +391,7 @@ async def execute_session_auto(request: SessionExecuteRequest) -> str:
     )
 
 
+@log_method_call
 @app.post("/api/v1/sessions/{session_id}", response_class=HTMLResponse)
 async def execute_session(session_id: str, request: SessionExecuteRequest) -> str:
     """특정 세션에서 Side 파일을 실행하고 HTML 문서를 반환합니다.
@@ -418,6 +429,7 @@ async def execute_session(session_id: str, request: SessionExecuteRequest) -> st
         )
 
 
+@log_method_call
 @app.get("/")
 async def root() -> dict:
     """루트 엔드포인트."""

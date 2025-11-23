@@ -15,6 +15,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.edge.options import Options as EdgeOptions
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
 
+from .logger_config import log_method_call
 from .models import SideCommand, SideProject, SideSuite, SideTest
 
 BrowserFactory = Callable[[], webdriver.Remote]
@@ -83,6 +84,7 @@ class CommandExecutor:
             "storeText": self.handle_storeText,
         }
 
+    @log_method_call
     def _resolve_locator(self, locator: str) -> tuple[str, str]:
         for prefix, by in self.LOCATOR_PREFIX_MAP.items():
             if locator.startswith(prefix):
@@ -91,6 +93,7 @@ class CommandExecutor:
             return By.XPATH, locator
         return By.CSS_SELECTOR, locator
 
+    @log_method_call
     def _resolve_keys(self, value: str) -> str | Keys | list[Any]:
         """Selenium IDE 특수 키 문자열을 Selenium Keys로 변환합니다.
         
@@ -138,12 +141,14 @@ class CommandExecutor:
         # 여러 개인 경우 리스트로 반환 (send_keys는 리스트도 받을 수 있음)
         return result
 
+    @log_method_call
     def execute(self, command: SideCommand) -> None:
         handler = self._handlers.get(command.command)
         if handler is None:
             raise NotImplementedError(f"지원되지 않는 커맨드: {command.command}")
         handler(command)
 
+    @log_method_call
     def handle_open(self, command: SideCommand) -> None:
         target = command.target.strip()
         if not target:
@@ -153,34 +158,41 @@ class CommandExecutor:
             url = urljoin(self.context.base_url, target)
         self.context.driver.get(url)
 
+    @log_method_call
     def handle_click(self, command: SideCommand) -> None:
         element = self._find_element(command.target)
         element.click()
 
+    @log_method_call
     def handle_clickAndWait(self, command: SideCommand) -> None:
         self.handle_click(command)
         if command.value:
             self.handle_pause(command)
 
+    @log_method_call
     def handle_type(self, command: SideCommand) -> None:
         element = self._find_element(command.target)
         element.clear()
         element.send_keys(command.value)
 
+    @log_method_call
     def handle_sendKeys(self, command: SideCommand) -> None:
         element = self._find_element(command.target)
         keys = self._resolve_keys(command.value)
         # send_keys는 str, Keys, 또는 리스트를 모두 받을 수 있음
         element.send_keys(keys)  # type: ignore[arg-type]
 
+    @log_method_call
     def handle_pause(self, command: SideCommand) -> None:
         delay_ms = float(command.value or command.target or "0")
         time.sleep(delay_ms / 1000 if delay_ms > 10 else delay_ms)
 
+    @log_method_call
     def handle_mouseOver(self, command: SideCommand) -> None:
         element = self._find_element(command.target)
         ActionChains(self.context.driver).move_to_element(element).perform()
 
+    @log_method_call
     def handle_setWindowSize(self, command: SideCommand) -> None:
         size_text = (command.target or command.value or "").strip().lower().replace(" ", "")
         if not size_text:
@@ -194,6 +206,7 @@ class CommandExecutor:
             raise ValueError(f"setWindowSize 포맷 오류: '{command.target or command.value}'") from exc
         self.context.driver.set_window_size(width, height)
 
+    @log_method_call
     def handle_assertText(self, command: SideCommand) -> None:
         element = self._find_element(command.target)
         actual = element.text.strip()
@@ -201,14 +214,17 @@ class CommandExecutor:
         if actual != expected:
             raise AssertionError(f"텍스트 불일치: expected '{expected}', got '{actual}'")
 
+    @log_method_call
     def handle_assertElementPresent(self, command: SideCommand) -> None:
         self._find_element(command.target)
 
+    @log_method_call
     def handle_storeText(self, command: SideCommand) -> None:
         # 단순 지원: storeText 는 assert 처럼 바로 출력만 수행
         element = self._find_element(command.target)
         _ = element.text  # 추후 확장을 위해 자리만 확보
 
+    @log_method_call
     def _find_element(self, locator: str):
         by, value = self._resolve_locator(locator)
         try:
@@ -217,6 +233,7 @@ class CommandExecutor:
             raise NoSuchElementException(f"요소를 찾을 수 없습니다: {locator}") from exc
 
 
+@log_method_call
 def create_webdriver_factory(browser: str, headless: bool = False) -> BrowserFactory:
     browser = browser.lower()
 
@@ -264,6 +281,7 @@ class SeleniumSideRunner:
         finally:
             driver.quit()
 
+    @log_method_call
     def run_suite(self, suite: SideSuite) -> None:
         tests = [self.project.tests[test_id] for test_id in suite.tests]
         if suite.persist_session:
@@ -274,10 +292,12 @@ class SeleniumSideRunner:
                 with self._driver_session() as driver:
                     self._run_tests(driver, [test])
 
+    @log_method_call
     def run_test(self, test: SideTest) -> None:
         with self._driver_session() as driver:
             self._run_tests(driver, [test])
 
+    @log_method_call
     def run_test_with_driver(self, test: SideTest, driver: webdriver.Remote) -> None:
         """기존 WebDriver를 사용하여 테스트를 실행합니다.
 
@@ -288,6 +308,7 @@ class SeleniumSideRunner:
         driver.implicitly_wait(self.implicit_wait)
         self._run_tests(driver, [test])
 
+    @log_method_call
     def run_suite_with_driver(self, suite: SideSuite, driver: webdriver.Remote) -> None:
         """기존 WebDriver를 사용하여 Suite를 실행합니다.
 
@@ -299,6 +320,7 @@ class SeleniumSideRunner:
         tests = [self.project.tests[test_id] for test_id in suite.tests]
         self._run_tests(driver, tests)
 
+    @log_method_call
     def _run_tests(self, driver, tests: Iterable[SideTest]) -> None:
         context = CommandContext(driver=driver, base_url=self.base_url)
         executor = CommandExecutor(context)
