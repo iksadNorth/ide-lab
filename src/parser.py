@@ -5,6 +5,8 @@ from __future__ import annotations
 import random
 import string
 from datetime import datetime
+
+from faker import Faker
 from jinja2 import Template
 
 
@@ -66,4 +68,17 @@ class Parser:
             랜덤 문자열
         """
         return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
+    
+    def getFaker(self) -> Faker:
+        """한국 로케이션으로 설정된 Faker 객체를 반환합니다.
+        
+        Returns:
+            Faker 객체 (ko_KR 로케이션)
+        
+        사용 예:
+            {{ parser.getFaker().name() }}
+            {{ parser.getFaker().email() }}
+            {{ parser.getFaker().phone_number() }}
+        """
+        return Faker('ko_KR')
 
