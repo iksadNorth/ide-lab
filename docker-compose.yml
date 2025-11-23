@@ -92,6 +92,10 @@ services:
     volumes:
       - ./storage:/app/storage
       - ./logs/api-server:/app/logs
+      # 소스코드 마운트 (개발 환경용 - 실시간 반영)
+      - ./src:/app/src
+      - ./main.py:/app/main.py
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     depends_on:
       selenium-hub:
         condition: service_healthy

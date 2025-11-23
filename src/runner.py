@@ -20,104 +20,6 @@ from .models import SideCommand, SideProject, SideSuite, SideTest
 BrowserFactory = Callable[[], webdriver.Remote]
 
 
-LOCATOR_PREFIX_MAP = {
-    "css=": By.CSS_SELECTOR,
-    "xpath=": By.XPATH,
-    "id=": By.ID,
-    "name=": By.NAME,
-    "link=": By.LINK_TEXT,
-    "linkText=": By.LINK_TEXT,
-    "partialLinkText=": By.PARTIAL_LINK_TEXT,
-}
-
-# Selenium IDE 특수 키 매핑
-KEY_MAP = {
-    "${KEY_ENTER}": Keys.RETURN,
-    "${KEY_TAB}": Keys.TAB,
-    "${KEY_ESCAPE}": Keys.ESCAPE,
-    "${KEY_BACKSPACE}": Keys.BACKSPACE,
-    "${KEY_DELETE}": Keys.DELETE,
-    "${KEY_UP}": Keys.UP,
-    "${KEY_DOWN}": Keys.DOWN,
-    "${KEY_LEFT}": Keys.LEFT,
-    "${KEY_RIGHT}": Keys.RIGHT,
-    "${KEY_HOME}": Keys.HOME,
-    "${KEY_END}": Keys.END,
-    "${KEY_PAGEUP}": Keys.PAGE_UP,
-    "${KEY_PAGEDOWN}": Keys.PAGE_DOWN,
-    "${KEY_SPACE}": Keys.SPACE,
-    "${KEY_F1}": Keys.F1,
-    "${KEY_F2}": Keys.F2,
-    "${KEY_F3}": Keys.F3,
-    "${KEY_F4}": Keys.F4,
-    "${KEY_F5}": Keys.F5,
-    "${KEY_F6}": Keys.F6,
-    "${KEY_F7}": Keys.F7,
-    "${KEY_F8}": Keys.F8,
-    "${KEY_F9}": Keys.F9,
-    "${KEY_F10}": Keys.F10,
-    "${KEY_F11}": Keys.F11,
-    "${KEY_F12}": Keys.F12,
-}
-
-
-def _resolve_locator(locator: str) -> tuple[str, str]:
-    for prefix, by in LOCATOR_PREFIX_MAP.items():
-        if locator.startswith(prefix):
-            return by, locator[len(prefix) :]
-    if locator.startswith("//"):
-        return By.XPATH, locator
-    return By.CSS_SELECTOR, locator
-
-
-def _resolve_keys(value: str) -> str | Keys | list[Any]:
-    """Selenium IDE 특수 키 문자열을 Selenium Keys로 변환합니다.
-    
-    Args:
-        value: 키 값 문자열 (예: "${KEY_ENTER}", "hello${KEY_ENTER}")
-    
-    Returns:
-        변환된 키 값 (특수 키가 포함된 경우 Keys 객체, 문자열, 또는 리스트)
-    """
-    if not value:
-        return value
-    
-    # 정확히 특수 키만 있는 경우
-    if value in KEY_MAP:
-        return KEY_MAP[value]
-    
-    # 특수 키가 포함된 문자열인 경우 파싱
-    result: list[Any] = []
-    remaining = value
-    while remaining:
-        # 가장 먼저 매칭되는 특수 키 찾기
-        found = False
-        for key_pattern, key_value in KEY_MAP.items():
-            if key_pattern in remaining:
-                idx = remaining.index(key_pattern)
-                # 특수 키 앞의 일반 텍스트 추가
-                if idx > 0:
-                    result.append(remaining[:idx])
-                # 특수 키 추가
-                result.append(key_value)
-                # 남은 부분 처리
-                remaining = remaining[idx + len(key_pattern):]
-                found = True
-                break
-        
-        if not found:
-            # 더 이상 특수 키가 없으면 남은 부분 모두 추가
-            result.append(remaining)
-            break
-    
-    # 결과가 하나이고 Keys 객체인 경우 그대로 반환
-    if len(result) == 1:
-        return result[0]
-    
-    # 여러 개인 경우 리스트로 반환 (send_keys는 리스트도 받을 수 있음)
-    return result
-
-
 @dataclass(slots=True)
 class CommandContext:
     driver: webdriver.Remote
@@ -125,6 +27,46 @@ class CommandContext:
 
 
 class CommandExecutor:
+    LOCATOR_PREFIX_MAP = {
+        "css=": By.CSS_SELECTOR,
+        "xpath=": By.XPATH,
+        "id=": By.ID,
+        "name=": By.NAME,
+        "link=": By.LINK_TEXT,
+        "linkText=": By.LINK_TEXT,
+        "partialLinkText=": By.PARTIAL_LINK_TEXT,
+    }
+
+    # Selenium IDE 특수 키 매핑
+    KEY_MAP = {
+        "${KEY_ENTER}": Keys.RETURN,
+        "${KEY_TAB}": Keys.TAB,
+        "${KEY_ESCAPE}": Keys.ESCAPE,
+        "${KEY_BACKSPACE}": Keys.BACKSPACE,
+        "${KEY_DELETE}": Keys.DELETE,
+        "${KEY_UP}": Keys.UP,
+        "${KEY_DOWN}": Keys.DOWN,
+        "${KEY_LEFT}": Keys.LEFT,
+        "${KEY_RIGHT}": Keys.RIGHT,
+        "${KEY_HOME}": Keys.HOME,
+        "${KEY_END}": Keys.END,
+        "${KEY_PAGEUP}": Keys.PAGE_UP,
+        "${KEY_PAGEDOWN}": Keys.PAGE_DOWN,
+        "${KEY_SPACE}": Keys.SPACE,
+        "${KEY_F1}": Keys.F1,
+        "${KEY_F2}": Keys.F2,
+        "${KEY_F3}": Keys.F3,
+        "${KEY_F4}": Keys.F4,
+        "${KEY_F5}": Keys.F5,
+        "${KEY_F6}": Keys.F6,
+        "${KEY_F7}": Keys.F7,
+        "${KEY_F8}": Keys.F8,
+        "${KEY_F9}": Keys.F9,
+        "${KEY_F10}": Keys.F10,
+        "${KEY_F11}": Keys.F11,
+        "${KEY_F12}": Keys.F12,
+    }
+    
     def __init__(self, context: CommandContext):
         self.context = context
         self._handlers = {
@@ -140,6 +82,61 @@ class CommandExecutor:
             "assertElementPresent": self.handle_assertElementPresent,
             "storeText": self.handle_storeText,
         }
+
+    def _resolve_locator(self, locator: str) -> tuple[str, str]:
+        for prefix, by in self.LOCATOR_PREFIX_MAP.items():
+            if locator.startswith(prefix):
+                return by, locator[len(prefix) :]
+        if locator.startswith("//"):
+            return By.XPATH, locator
+        return By.CSS_SELECTOR, locator
+
+    def _resolve_keys(self, value: str) -> str | Keys | list[Any]:
+        """Selenium IDE 특수 키 문자열을 Selenium Keys로 변환합니다.
+        
+        Args:
+            value: 키 값 문자열 (예: "${KEY_ENTER}", "hello${KEY_ENTER}")
+        
+        Returns:
+            변환된 키 값 (특수 키가 포함된 경우 Keys 객체, 문자열, 또는 리스트)
+        """
+        if not value:
+            return value
+        
+        # 정확히 특수 키만 있는 경우
+        if value in self.KEY_MAP:
+            return self.KEY_MAP[value]
+        
+        # 특수 키가 포함된 문자열인 경우 파싱
+        result: list[Any] = []
+        remaining = value
+        while remaining:
+            # 가장 먼저 매칭되는 특수 키 찾기
+            found = False
+            for key_pattern, key_value in self.KEY_MAP.items():
+                if key_pattern in remaining:
+                    idx = remaining.index(key_pattern)
+                    # 특수 키 앞의 일반 텍스트 추가
+                    if idx > 0:
+                        result.append(remaining[:idx])
+                    # 특수 키 추가
+                    result.append(key_value)
+                    # 남은 부분 처리
+                    remaining = remaining[idx + len(key_pattern):]
+                    found = True
+                    break
+            
+            if not found:
+                # 더 이상 특수 키가 없으면 남은 부분 모두 추가
+                result.append(remaining)
+                break
+        
+        # 결과가 하나이고 Keys 객체인 경우 그대로 반환
+        if len(result) == 1:
+            return result[0]
+        
+        # 여러 개인 경우 리스트로 반환 (send_keys는 리스트도 받을 수 있음)
+        return result
 
     def execute(self, command: SideCommand) -> None:
         handler = self._handlers.get(command.command)
@@ -172,7 +169,7 @@ class CommandExecutor:
 
     def handle_sendKeys(self, command: SideCommand) -> None:
         element = self._find_element(command.target)
-        keys = _resolve_keys(command.value)
+        keys = self._resolve_keys(command.value)
         # send_keys는 str, Keys, 또는 리스트를 모두 받을 수 있음
         element.send_keys(keys)  # type: ignore[arg-type]
 
@@ -213,7 +210,7 @@ class CommandExecutor:
         _ = element.text  # 추후 확장을 위해 자리만 확보
 
     def _find_element(self, locator: str):
-        by, value = _resolve_locator(locator)
+        by, value = self._resolve_locator(locator)
         try:
             return self.context.driver.find_element(by, value)
         except NoSuchElementException as exc:
