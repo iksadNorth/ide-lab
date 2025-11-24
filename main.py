@@ -7,8 +7,8 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, status
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, File, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel
 
 from src import SeleniumSideRunner, load_side_project
@@ -72,18 +72,6 @@ app = FastAPI(
 
 
 # Pydantic 모델
-class SideUploadRequest(BaseModel):
-    """Side 파일 업로드 요청 모델."""
-
-    content: str
-
-
-class SideUpdateRequest(BaseModel):
-    """Side 파일 수정 요청 모델."""
-
-    content: str
-
-
 class SessionExecuteRequest(BaseModel):
     """세션 실행 요청 모델."""
 
@@ -96,21 +84,33 @@ class SessionExecuteRequest(BaseModel):
 # Side 관련 엔드포인트
 @log_method_call
 @app.post("/api/v1/sides/{side_id}", status_code=status.HTTP_201_CREATED)
-async def upload_side(side_id: str, request: SideUploadRequest) -> dict:
+async def upload_side(side_id: str, file: UploadFile = File(...)) -> dict:
     """Side 파일을 업로드합니다.
 
     Args:
         side_id: Side 파일의 고유 ID
-        request: Side 파일의 JSON 문자열 내용
+        file: 업로드할 Side 파일 (.side 파일)
 
     Returns:
         업로드 성공 메시지
     """
     try:
+        # 파일 내용 읽기
+        content = await file.read()
+        try:
+            content_str = content.decode("utf-8")
+        except UnicodeDecodeError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="파일 인코딩 오류: UTF-8 형식의 파일만 지원합니다.",
+            )
+        
         # JSON 유효성 검사
-        load_side_project(request.content)
-        side_repository.save(side_id, request.content)
+        load_side_project(content_str)
+        side_repository.save(side_id, content_str)
         return {"message": f"Side 파일 '{side_id}'이(가) 성공적으로 업로드되었습니다."}
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -143,18 +143,42 @@ async def list_sides() -> dict:
 
 @log_method_call
 @app.get("/api/v1/sides/{side_id}")
-async def get_side(side_id: str) -> dict:
-    """특정 Side 파일의 내용을 조회합니다.
+async def get_side(side_id: str) -> FileResponse:
+    """특정 Side 파일을 다운로드합니다.
 
     Args:
         side_id: Side 파일의 고유 ID
 
     Returns:
-        Side 파일의 JSON 내용
+        Side 파일 (.side 파일)
     """
     try:
-        content = side_repository.get(side_id)
-        return {"side_id": side_id, "content": content}
+        # 파일 시스템 저장소인 경우 파일 경로 직접 반환
+        if isinstance(side_repository, FilesystemSideRepository):
+            # FilesystemSideRepository의 내부 메서드를 사용하여 파일 경로 얻기
+            # side_id를 안전한 파일명으로 변환
+            safe_id = side_id.replace("/", "_").replace("\\", "_")
+            file_path = side_repository.base_dir / f"{safe_id}.side"
+            if not file_path.exists():
+                raise FileNotFoundError(f"Side 파일을 찾을 수 없습니다: {side_id}")
+            return FileResponse(
+                path=str(file_path),
+                filename=f"{side_id}.side",
+                media_type="application/json",
+            )
+        else:
+            # 다른 저장소 구현체인 경우 임시 파일 생성
+            content = side_repository.get(side_id)
+            import tempfile
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".side", delete=False, encoding="utf-8") as tmp_file:
+                tmp_file.write(content)
+                tmp_path = tmp_file.name
+            
+            return FileResponse(
+                path=tmp_path,
+                filename=f"{side_id}.side",
+                media_type="application/json",
+            )
     except FileNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -169,12 +193,12 @@ async def get_side(side_id: str) -> dict:
 
 @log_method_call
 @app.patch("/api/v1/sides/{side_id}")
-async def update_side(side_id: str, request: SideUpdateRequest) -> dict:
+async def update_side(side_id: str, file: UploadFile = File(...)) -> dict:
     """Side 파일을 수정합니다.
 
     Args:
         side_id: Side 파일의 고유 ID
-        request: Side 파일의 JSON 문자열 내용
+        file: 수정할 Side 파일 (.side 파일)
 
     Returns:
         수정 성공 메시지
@@ -187,9 +211,19 @@ async def update_side(side_id: str, request: SideUpdateRequest) -> dict:
                 detail=f"Side 파일을 찾을 수 없습니다: {side_id}",
             )
 
+        # 파일 내용 읽기
+        content = await file.read()
+        try:
+            content_str = content.decode("utf-8")
+        except UnicodeDecodeError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="파일 인코딩 오류: UTF-8 형식의 파일만 지원합니다.",
+            )
+
         # JSON 유효성 검사
-        load_side_project(request.content)
-        side_repository.save(side_id, request.content)
+        load_side_project(content_str)
+        side_repository.save(side_id, content_str)
         return {"message": f"Side 파일 '{side_id}'이(가) 성공적으로 수정되었습니다."}
     except HTTPException:
         raise

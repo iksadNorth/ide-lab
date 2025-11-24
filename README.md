@@ -155,12 +155,8 @@ Lock 관리를 위한 인터페이스 및 파일 시스템 기반 구현체입�
 #### `POST /api/v1/sides/{side_id}`
 Side 파일을 업로드합니다.
 
-**Request Body**:
-```json
-{
-  "content": "{ ... side 파일 JSON ... }"
-}
-```
+**Request**: `multipart/form-data`
+- `file`: 업로드할 Side 파일 (.side 파일)
 
 **Response**: `201 Created`
 ```json
@@ -180,15 +176,29 @@ Side 파일을 업로드합니다.
 ```
 
 #### `GET /api/v1/sides/{side_id}`
-특정 Side 파일의 내용을 조회합니다.
+특정 Side 파일을 다운로드합니다.
+
+**Response**: `200 OK`
+- Content-Type: `application/json`
+- 파일 다운로드 (.side 파일)
+
+#### `PATCH /api/v1/sides/{side_id}`
+Side 파일을 수정합니다.
+
+**Request**: `multipart/form-data`
+- `file`: 수정할 Side 파일 (.side 파일)
 
 **Response**: `200 OK`
 ```json
 {
-  "side_id": "side1",
-  "content": "{ ... side 파일 JSON ... }"
+  "message": "Side 파일 '{side_id}'이(가) 성공적으로 수정되었습니다."
 }
 ```
+
+#### `DELETE /api/v1/sides/{side_id}`
+Side 파일을 삭제합니다.
+
+**Response**: `204 No Content`
 
 ### 세션 실행
 
