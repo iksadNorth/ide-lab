@@ -20,7 +20,7 @@ Selenium Grid를 활용한 세션 풀링과 동시성 제어를 통해 안정적
 
 ![demo](documents/demo-side-macro.gif)
 
-*영상 1-1: .side 파일를 이용한 매크로 실행 [Selenium IDE]*
+*영상 1-2: .side 파일를 이용한 매크로 실행 [Selenium IDE]*
 
 ### 시연 영상 2: Side 파일 등록
 
