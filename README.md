@@ -94,9 +94,3 @@ src/
     ├── lock_repository.py              # Lock 관리 인터페이스
     └── filesystem_lock_repository.py   # FileSystem 기반 Lock 관리 구현체
 ```
-
-## API 문서 확인
-- Swagger UI: http://localhost:8000/docs
-
-![Swagger UI](documents/swagger-ui-screenshot.png)
-*그림 7: Swagger UI를 통한 API 테스트 예시*
