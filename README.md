@@ -53,17 +53,15 @@ Selenium Grid를 활용한 세션 풀링과 동시성 제어를 통해 안정적
 
 *영상 3: Selenium Grid Node의 noVNC를 통해 실제 브라우저 세션이 실행되는 모습을 실시간으로 확인*
 
-### 시연 영상 4: 특정 세션에서 Side 파일 실행
+### 시연 영상 4: 템플릿 파라미터를 활용한 동적 시나리오 실행
 
-![demo](documents/demo-siderun-in-session.gif)
+![demo](documents/demo-make-dynamic-side.gif)
 
-*영상 4: 등록된 Side 파일을 특정 세션에서 실행하고 결과를 확인하는 과정*
-
-### 시연 영상 5: 템플릿 파라미터를 활용한 동적 시나리오 실행
+*영상 4-1: Jinja2 템플릿이 포함된 Side 시나리오를 생성하는 과정*
 
 ![demo](documents/demo-siderun-dynamic.gif)
 
-*영상 5: Jinja2 템플릿이 포함된 Side 파일에 다양한 파라미터를 전달하여 동적으로 시나리오를 생성하고 실행하는 과정*
+*영상 4-2: Jinja2 템플릿이 포함된 Side 파일에 다양한 파라미터를 전달하여 동적으로 시나리오를 실행하는 과정*
 
 ## 그래서 의도한 대로 성과가 나왔나요?
 
